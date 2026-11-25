@@ -39,8 +39,10 @@ function show() {
   const main = asin ? ['Open it on Amazon', `https://www.amazon.com/dp/${enc(asin)}`] : shared ? ['Open it on Amazon', shared] : q ? [isCode ? 'Search Amazon for this barcode' : 'Search Amazon', `https://www.amazon.com/s?k=${q}`] : null;
   $('#amz').hidden = !main;
   if (main) { $('#amzGo').textContent = main[0]; $('#amzGo').href = main[1]; }
+  // Keepa opens the product by ASIN, or its search by barcode or name, so the 90-day low is one tap away.
+  const kp = asin ? `https://keepa.com/#!product/1-${enc(asin)}` : q ? `https://keepa.com/#!search/1-${q}` : ''; $('#keepaGo').hidden = !kp; if (kp) $('#keepaGo').href = kp;
   const named = item.title && isCode, nm = $('#amzName'); nm.textContent = named ? 'Search by name' : 'Search Google'; nm.href = named ? `https://www.amazon.com/s?k=${enc(item.title.slice(0, 90))}` : `https://www.google.com/search?q=${enc('amazon ' + word)}`;
-  const list = [asin && ['Can I sell it?', `https://sellercentral.amazon.com/abis/listing/syh?asin=${enc(asin)}`], asin && ['Price history', `https://camelcamelcamel.com/product/${enc(asin)}`], asin && ['Keepa', `https://keepa.com/#!product/1-${enc(asin)}`], !asin && q && ['Keepa', `https://keepa.com/#!search/1-${q}`], q && ['eBay sold', `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`]].filter(Boolean);
+  const list = [asin && ['Can I sell it?', `https://sellercentral.amazon.com/abis/listing/syh?asin=${enc(asin)}`], asin && ['Price history', `https://camelcamelcamel.com/product/${enc(asin)}`], q && ['eBay sold', `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`]].filter(Boolean);
   $('#links').innerHTML = list.map(([n, u]) => `<a class="btn slim" target="_blank" rel="noopener" href="${u}">${n}</a>`).join('');
   if (x.code || x.cost || x.price) keep('draft', { t: Date.now(), form: rawForm(), item, editing, lastKey });
 }
