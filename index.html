@@ -30,7 +30,8 @@
       <div id="state" class="note blue" role="status"></div>
       <div id="found"></div>
       <div id="amz" class="acts" hidden><a class="btn go full" id="amzGo" target="_blank" rel="noopener"></a><button type="button" class="btn" id="paste">Paste from Amazon</button><a class="btn" id="amzName" target="_blank" rel="noopener"></a></div>
-      <div class="fields pair"><label class="field">Shelf price ($)<input name="cost" inputmode="decimal"></label><label class="field">Amazon price ($)<input name="price" inputmode="decimal"></label></div>
+      <div class="fields pair"><label class="field">Amazon price ($)<input name="price" inputmode="decimal"></label><label class="field">90-day low ($)<input name="low90" inputmode="decimal" placeholder="from Keepa"></label><label class="field all">Shelf price ($)<input name="cost" inputmode="decimal" placeholder="only if the tag is close"></label></div>
+      <div class="row ticks"><label class="tick"><input type="checkbox" name="bbSuppressed">Buy Box suppressed</label><label class="tick"><input type="checkbox" name="amazon90">Amazon sold it in 90 days</label></div>
       <div id="links" class="row"></div>
     </section>
     <section class="glass pane" id="out"></section>
@@ -43,7 +44,7 @@
         <label class="field all">Category<select name="cat"></select></label>
         <label class="field">Weight (lb)<input name="lb" inputmode="decimal"></label><label class="field">Length (in)<input name="l" inputmode="decimal"></label><label class="field">Width (in)<input name="w" inputmode="decimal"></label><label class="field">Height (in)<input name="h" inputmode="decimal"></label>
         <label class="field">Coupon (%)<input name="coupon" inputmode="decimal"></label><label class="field">Units per listing<input name="pack" inputmode="numeric"></label></div>
-        <label class="tick"><input type="checkbox" name="amazonSells">Amazon sells it too</label><label class="tick"><input type="checkbox" name="hazmat">Hazmat</label><label class="tick"><input type="checkbox" name="melt">Meltable</label></details>
+        <label class="tick"><input type="checkbox" name="amazonSells">Amazon sells it now</label><label class="tick"><input type="checkbox" name="hazmat">Hazmat</label><label class="tick"><input type="checkbox" name="melt">Meltable</label></details>
       <div class="fields"><label class="field">Store<input name="store"></label><label class="field">Notes<input name="notes"></label></div>
     </section>
   </form>

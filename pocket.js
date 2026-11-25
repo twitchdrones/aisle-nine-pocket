@@ -27,16 +27,20 @@ function clearForm(keepCode) {
 }
 function show() {
   const x = values(), r = Fees.check(x, settings), c = Codes.read(x.code);
-  $('#out').innerHTML = !r.verdict ? '<p class="soft">Add the shelf price and the Amazon price to see the answer. It works with no signal.</p>'
-    : `<div class="hero ${r.verdict}"><div><div class="soft">Profit each</div><div class="big">${usd(r.profit, 1)}</div></div><span class="chip ${r.verdict}">${r.verdict}</span></div>
-    <div class="flow"><div><span class="soft">Pay at most</span><strong>${usd(r.maxCost)}</strong></div><div><span class="soft">Return</span><strong>${Math.round(r.roi)}%</strong></div><div><span class="soft">Break-even</span><strong>${usd(r.breakeven)}</strong></div><div><span class="soft">If price drops 10%</span><strong>${usd(r.drop10, 1)}</strong></div></div>
+  const paid = num(x.cost) > 0, reasons = list => `<ul class="reasons">${list.map(([k, t]) => `<li class="${k}">${esc(t)}</li>`).join('')}</ul>`;
+  // The big number is what you compare with the shelf tag, so it shows as soon as the Amazon price is in.
+  $('#out').innerHTML = !r.verdict && r.priceUsed ? `<div class="hero none"><div><div class="soft">Pay at most, each</div><div class="big">${usd(r.maxCost)}</div></div></div>
+    <p class="soft">Meets your $${num(settings.minProfit)}, ${num(settings.minRoi)}% and ${num(settings.minMargin)}% goals at ${usd(r.priceUsed)} on Amazon. Tag above it: walk on. Tag well below: type it to check the rest.</p>${reasons(r.info.map(t => ['blue', t]))}`
+    : !r.verdict ? '<p class="soft">Add the Amazon price to see the most you can pay. Add the shelf price for the full answer. It works with no signal.</p>'
+    : `<div class="hero ${r.verdict}"><div><div class="soft">${paid ? 'Profit each' : 'Verdict'}</div><div class="big">${paid ? usd(r.profit, 1) : 'Skip it'}</div></div><span class="chip ${r.verdict}">${r.verdict}</span></div>
+    ${paid ? `<div class="flow"><div><span class="soft">Pay at most</span><strong>${usd(r.maxCost)}</strong></div><div><span class="soft">Return</span><strong>${Math.round(r.roi)}%</strong></div><div><span class="soft">Shelf vs Amazon</span><strong>${Math.round(r.costPct)}%</strong></div><div><span class="soft">If price drops ${r.stress || 10}%</span><strong>${usd(r.stress ? r.dropS : r.drop10, 1)}</strong></div></div>` : ''}
     <ul class="reasons">${[...r.no.map(t => ['bad', t]), ...r.warn.map(t => ['maybe', t]), ...r.info.map(t => ['blue', t]), ...r.good.map(t => ['good', t])].map(([k, t]) => `<li class="${k}">${esc(t)}</li>`).join('')}</ul>${r.ratesOld ? '<p class="soft">These are 2026 fees. Check for an update.</p>' : ''}`;
   const asin = item.asin || c.asin, isCode = ['upc', 'ean', 'isbn'].includes(c.type), word = isCode ? c.value : item.title || (c.type === 'text' ? c.value : ''), enc = encodeURIComponent, q = enc(word), shared = /^https:\/\/(a\.co|amzn\.)/.test(item.url || '') ? item.url : '';
   const main = asin ? ['Open it on Amazon', `https://www.amazon.com/dp/${enc(asin)}`] : shared ? ['Open it on Amazon', shared] : q ? [isCode ? 'Search Amazon for this barcode' : 'Search Amazon', `https://www.amazon.com/s?k=${q}`] : null;
   $('#amz').hidden = !main;
   if (main) { $('#amzGo').textContent = main[0]; $('#amzGo').href = main[1]; }
   const named = item.title && isCode, nm = $('#amzName'); nm.textContent = named ? 'Search by name' : 'Search Google'; nm.href = named ? `https://www.amazon.com/s?k=${enc(item.title.slice(0, 90))}` : `https://www.google.com/search?q=${enc('amazon ' + word)}`;
-  const list = [asin && ['Can I sell it?', `https://sellercentral.amazon.com/abis/listing/syh?asin=${enc(asin)}`], asin && ['Price history', `https://camelcamelcamel.com/product/${enc(asin)}`], asin && ['Keepa', `https://keepa.com/#!product/1-${enc(asin)}`], q && ['eBay sold', `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`]].filter(Boolean);
+  const list = [asin && ['Can I sell it?', `https://sellercentral.amazon.com/abis/listing/syh?asin=${enc(asin)}`], asin && ['Price history', `https://camelcamelcamel.com/product/${enc(asin)}`], asin && ['Keepa', `https://keepa.com/#!product/1-${enc(asin)}`], !asin && q && ['Keepa', `https://keepa.com/#!search/1-${q}`], q && ['eBay sold', `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`]].filter(Boolean);
   $('#links').innerHTML = list.map(([n, u]) => `<a class="btn slim" target="_blank" rel="noopener" href="${u}">${n}</a>`).join('');
   if (x.code || x.cost || x.price) keep('draft', { t: Date.now(), form: rawForm(), item, editing, lastKey });
 }
@@ -202,7 +206,7 @@ function drawLeads() {
     ${leads.length && !pc ? '<p class="soft">To send in one tap, pair with your PC in Setup. Or share a file and open it on the PC.</p>' : ''}</section>
     ${leads.map(l => `<button class="lead ${l.sent ? 'sent' : ''}" data-lead="${esc(l.uid)}"><span class="shot">${pic(l.image)}</span><div><span class="name">${esc(l.title)}</span><span class="line">${esc([l.store, l.cost && usd(l.cost), l.sent ? 'sent' : ''].filter(Boolean).join(' · '))}</span></div><span class="end">${l.verdict ? `<span class="chip ${esc(l.verdict)}">${esc(l.verdict)}</span><span class="soft">${usd(l.profit, 1)}</span>` : ''}</span></button>`).join('')}`;
 }
-const pack = list => list.map(({ when, sent, code, verdict, profit, ...l }) => ({ ...l, ...Object.fromEntries(['cost', 'price', 'rank', 'offers', 'l', 'w', 'h'].map(k => [k, l[k] === '' || l[k] === undefined ? '' : num(l[k])])) }));
+const pack = list => list.map(({ when, sent, code, verdict, profit, ...l }) => ({ ...l, ...Object.fromEntries(['cost', 'price', 'low90', 'rank', 'offers', 'l', 'w', 'h'].map(k => [k, l[k] === '' || l[k] === undefined ? '' : num(l[k])])) }));
 const b64 = o => { let s = ''; for (const b of new TextEncoder().encode(JSON.stringify(o))) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const DO = {
   send() {
@@ -229,7 +233,7 @@ const FIELDS = [['tax', 'Sales tax (%)'], ['minProfit', 'Least profit each ($)']
 function drawSetup() {
   $('#setup').innerHTML = `<section class="glass pane"><strong>Your PC</strong><p class="soft">${pc ? `Paired with ${esc(new URL(pc).host)}. Leads send when you are on your home Wi-Fi with the PC app open.` : 'On the PC open Aisle Nine, Connections, Phone, and turn it on. Then tap Scan here and point at the pairing code. Your goals and tax rate copy over too.'}</p><div class="row"><button class="btn" data-do="photo">Read a photo</button>${pc ? '<button class="btn" data-do="unpair">Unpair</button>' : ''}</div></section>
   <section class="glass pane"><strong>Your goals</strong><form id="set"><div class="fields pair">${FIELDS.map(([k, n]) => `<label class="field">${n}<input name="${k}" inputmode="decimal" value="${esc(settings[k])}"></label>`).join('')}<label class="field all">Seller plan<select name="plan"><option value="individual" ${settings.plan === 'individual' ? 'selected' : ''}>Individual, $0.99 a sale</option><option value="pro" ${settings.plan === 'pro' ? 'selected' : ''}>Professional, $39.99 a month</option></select></label></div><button class="btn go" style="width:100%;margin-top:14px">Save</button></form></section>
-  <section class="glass pane"><strong>About</strong><p class="soft">Leads and settings stay on this phone. Barcodes are sent only to Open Library, Open Food Facts and MusicBrainz to find a name. No account, no tracking. Fees are 2026 estimates.</p></section>`;
+  <section class="glass pane"><strong>About</strong><p class="soft">Leads and settings stay on this phone. Barcodes are sent only to Open Library, Open Food Facts and MusicBrainz to find a name. No account, no tracking. Fees are 2026 estimates, with Amazon's announced 2027 increase added from Dec 15.</p></section>`;
 }
 document.addEventListener('submit', e => { if (e.target.id !== 'set') return; e.preventDefault(); const next = { ...settings, plan: e.target.elements.plan.value }; for (const [k, n] of FIELDS) { const t = e.target.elements[k].value.replace(/[$,%\s]/g, ''); if (t === '' || !(+t >= 0) || +t > 1e8) return toast(`${n} must be a number`); next[k] = +t; } settings = next; if (keep('settings', settings)) toast('Saved'); show(); });
 function pair(text) {
