@@ -29,14 +29,17 @@
       <div class="row tight"><label class="field">Barcode, ISBN, ASIN or link<input name="code" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></label><button type="button" class="btn" id="look">Look up</button></div>
       <div id="state" class="note blue" role="status"></div>
       <div id="found"></div>
+      <div id="amz" class="acts" hidden><a class="btn go full" id="amzGo" target="_blank" rel="noopener"></a><button type="button" class="btn" id="paste">Paste from Amazon</button><a class="btn" id="amzName" target="_blank" rel="noopener"></a></div>
       <div class="fields pair"><label class="field">Shelf price ($)<input name="cost" inputmode="decimal"></label><label class="field">Amazon price ($)<input name="price" inputmode="decimal"></label></div>
       <div id="links" class="row"></div>
     </section>
     <section class="glass pane" id="out"></section>
     <section class="glass pane">
       <div class="field">Approved to sell it?<div class="seg"><label><input type="radio" name="approved" value="" checked>Not sure</label><label><input type="radio" name="approved" value="yes">Yes</label><label><input type="radio" name="approved" value="no">No</label></div></div>
-      <div class="fields pair"><label class="field">Sales rank<input name="rank" inputmode="numeric"></label><label class="field">Sellers<input name="offers" inputmode="numeric"></label></div>
-      <details><summary>Category, size, discounts</summary><div class="fields pair">
+      <div class="field">“Bought in past month” on Amazon<div class="seg chips"><label><input type="radio" name="bought" value="" checked>?</label><label><input type="radio" name="bought" value="0">None</label><label><input type="radio" name="bought" value="50">50+</label><label><input type="radio" name="bought" value="200">200+</label><label><input type="radio" name="bought" value="1000">1K+</label></div></div>
+      <div class="field">How big is it?<div class="seg chips"><label><input type="radio" name="how" value="" checked>?</label><label><input type="radio" name="how" value="flat">Flat</label><label><input type="radio" name="how" value="book">Book</label><label><input type="radio" name="how" value="shoe">Shoebox</label><label><input type="radio" name="how" value="big">Big</label></div></div>
+      <details><summary>Category, rank, exact size, discounts</summary><div class="fields pair">
+        <label class="field">Sales rank<input name="rank" inputmode="numeric"></label><label class="field">Sellers<input name="offers" inputmode="numeric"></label>
         <label class="field all">Category<select name="cat"></select></label>
         <label class="field">Weight (lb)<input name="lb" inputmode="decimal"></label><label class="field">Length (in)<input name="l" inputmode="decimal"></label><label class="field">Width (in)<input name="w" inputmode="decimal"></label><label class="field">Height (in)<input name="h" inputmode="decimal"></label>
         <label class="field">Coupon (%)<input name="coupon" inputmode="decimal"></label><label class="field">Units per listing<input name="pack" inputmode="numeric"></label></div>

@@ -28,3 +28,6 @@ main { display: block; overflow: visible; border-radius: 0 }
 .sent { opacity: .62 }
 #bar.one { grid-template-columns: 1fr }
 #toast { width: max-content } #toast button { white-space: nowrap }
+#amz .btn { min-height: 52px; font-size: 16px } #amz .go { font-size: 17px }
+.seg.chips label { padding: 0 4px; min-height: 46px; font-size: 15px }
+#state.good { --c: var(--good) }

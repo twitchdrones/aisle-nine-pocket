@@ -135,7 +135,7 @@
     if (!out.title) { const m = t.match(/Amazon\.com ?: ([^\n]{12,200})/); if (m) out.title = m[1].trim(); }
     const n = t.match(/\bNew \((\d+)\) from/i) || t.match(/New & Used \((\d+)\)/i) || t.match(/See All Buying Options[\s\S]{0,40}?\((\d+)\)/i); if (n) out.offers = +n[1];
     const sold = t.match(/(?:Sold by|Seller)\s*:?\s*\n?([^\n]{2,50})/i); if (sold) out.amazonSells = /^Amazon(\.com)?\b(?! (resale|warehouse|renewed))/i.test(sold[1].trim()); if (/ships from and sold by amazon\.com|Shipper ?\/ ?Seller\s*\n?Amazon\.com/i.test(t)) out.amazonSells = true;
-    const month = t.match(/([\d.]+K?)\+ bought in past month/i); if (month) out.bought = month[1] + '+';
+    const month = t.match(/([\d.]+K?)\+ bought in past month/i); if (month) out.bought = Math.round(parseFloat(month[1]) * (/k/i.test(month[1]) ? 1000 : 1));
     if (/currently unavailable/i.test(t)) out.unavailable = true;
     return out;
   }

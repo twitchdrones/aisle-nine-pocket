@@ -16,21 +16,61 @@ const pic = src => src ? `<img alt="" loading="lazy" referrerpolicy="no-referrer
 
 /* ---------- the check ---------- */
 els.cat.innerHTML = Object.entries(Fees.CATS).map(([k, v]) => [k, v[0]]).sort((a, b) => a[1].localeCompare(b[1])).map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join('');
-const values = () => { const o = { ...item }; for (const e of els) if (e.name && (e.type !== 'radio' || e.checked)) o[e.name] = e.type === 'checkbox' ? e.checked : e.value.trim(); o.oz = num(o.lb) * 16; return o; };
+const values = () => { const o = { ...item }; for (const e of els) if (e.name && (e.type !== 'radio' || e.checked)) o[e.name] = e.type === 'checkbox' ? e.checked : e.value.trim(); o.oz = num(o.lb) * 16; o.sizeGuess = !!o.how; delete o.how; return o; };
+// generous on purpose: a size that is guessed too small hides fees
+const SIZES = { flat: [10, 7, .7, .5], book: [9, 6, 2, 1.1], shoe: [13, 8, 5, 3], big: [18, 14, 8, 7] };
 function clearForm(keepCode) {
   item = {}; editing = null;
   for (const e of els) { if (!e.name || e.name === 'store' || (keepCode && e.name === 'code')) continue; if (e.type === 'radio') e.checked = e.value === ''; else if (e.type === 'checkbox') e.checked = false; else e.value = e.name === 'cat' ? 'other' : ''; }
   $('#found').innerHTML = ''; state(''); show();
+  if (!keepCode) keep('draft', null);
 }
 function show() {
   const x = values(), r = Fees.check(x, settings), c = Codes.read(x.code);
   $('#out').innerHTML = !r.verdict ? '<p class="soft">Add the shelf price and the Amazon price to see the answer. It works with no signal.</p>'
     : `<div class="hero ${r.verdict}"><div><div class="soft">Profit each</div><div class="big">${usd(r.profit, 1)}</div></div><span class="chip ${r.verdict}">${r.verdict}</span></div>
     <div class="flow"><div><span class="soft">Pay at most</span><strong>${usd(r.maxCost)}</strong></div><div><span class="soft">Return</span><strong>${Math.round(r.roi)}%</strong></div><div><span class="soft">Break-even</span><strong>${usd(r.breakeven)}</strong></div><div><span class="soft">If price drops 10%</span><strong>${usd(r.drop10, 1)}</strong></div></div>
-    <ul class="reasons">${[...r.no.map(t => ['bad', t]), ...r.warn.map(t => ['maybe', t]), ...r.good.map(t => ['good', t])].map(([k, t]) => `<li class="${k}">${esc(t)}</li>`).join('')}</ul>${r.ratesOld ? '<p class="soft">These are 2026 fees. Check for an update.</p>' : ''}`;
-  const asin = item.asin || c.asin, word = ['upc', 'ean', 'isbn'].includes(c.type) ? c.value : item.title || (c.type === 'text' ? c.value : ''), q = encodeURIComponent(word);
-  const list = [asin ? ['Amazon page', `https://www.amazon.com/dp/${encodeURIComponent(asin)}`] : q && ['Find on Amazon', `https://www.amazon.com/s?k=${q}`], asin && ['Price history', `https://camelcamelcamel.com/product/${encodeURIComponent(asin)}`], q && ['eBay sold', `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`], q && ['Google', `https://www.google.com/search?q=${q}`]].filter(Boolean);
+    <ul class="reasons">${[...r.no.map(t => ['bad', t]), ...r.warn.map(t => ['maybe', t]), ...r.info.map(t => ['blue', t]), ...r.good.map(t => ['good', t])].map(([k, t]) => `<li class="${k}">${esc(t)}</li>`).join('')}</ul>${r.ratesOld ? '<p class="soft">These are 2026 fees. Check for an update.</p>' : ''}`;
+  const asin = item.asin || c.asin, isCode = ['upc', 'ean', 'isbn'].includes(c.type), word = isCode ? c.value : item.title || (c.type === 'text' ? c.value : ''), enc = encodeURIComponent, q = enc(word), shared = /^https:\/\/(a\.co|amzn\.)/.test(item.url || '') ? item.url : '';
+  const main = asin ? ['Open it on Amazon', `https://www.amazon.com/dp/${enc(asin)}`] : shared ? ['Open it on Amazon', shared] : q ? [isCode ? 'Search Amazon for this barcode' : 'Search Amazon', `https://www.amazon.com/s?k=${q}`] : null;
+  $('#amz').hidden = !main;
+  if (main) { $('#amzGo').textContent = main[0]; $('#amzGo').href = main[1]; }
+  const named = item.title && isCode, nm = $('#amzName'); nm.textContent = named ? 'Search by name' : 'Search Google'; nm.href = named ? `https://www.amazon.com/s?k=${enc(item.title.slice(0, 90))}` : `https://www.google.com/search?q=${enc('amazon ' + word)}`;
+  const list = [asin && ['Can I sell it?', `https://sellercentral.amazon.com/abis/listing/syh?asin=${enc(asin)}`], asin && ['Price history', `https://camelcamelcamel.com/product/${enc(asin)}`], asin && ['Keepa', `https://keepa.com/#!product/1-${enc(asin)}`], q && ['eBay sold', `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`]].filter(Boolean);
   $('#links').innerHTML = list.map(([n, u]) => `<a class="btn slim" target="_blank" rel="noopener" href="${u}">${n}</a>`).join('');
+  if (x.code || x.cost || x.price) keep('draft', { t: Date.now(), form: rawForm(), item, editing, lastKey });
+}
+/* iPhone can drop this page while you are in Amazon, so the item in progress is kept and put back */
+const rawForm = () => { const o = {}; for (const e of els) if (e.name && (e.type !== 'radio' || e.checked)) o[e.name] = e.type === 'checkbox' ? e.checked : e.value; return o; };
+function putForm(o) { for (const e of els) { if (!e.name || !(e.name in o)) continue; if (e.type === 'radio') e.checked = e.value === String(o[e.name]); else if (e.type === 'checkbox') e.checked = !!o[e.name]; else e.value = o[e.name]; } }
+const showFound = () => { $('#found').innerHTML = item.title ? `${item.image ? `<span class="shot">${pic(item.image)}</span>` : ''}<strong>${esc(item.title)}</strong>` : ''; };
+
+/* whatever was copied in Amazon: its link with the name, a price, a sales count, a rank, or a whole page */
+function takeText(t) {
+  t = t.trim(); if (!t) return state('Nothing is copied yet. In Amazon tap Share, then Copy', 'maybe');
+  const mine = item.asin || Codes.read(els.code.value).asin, got = [], set = (k, v, n) => { els[k].value = v; got.push(n); };
+  const bought = n => { const v = [...f.querySelectorAll('[name=bought]')], pick = n >= 1000 ? '1000' : n >= 200 ? '200' : n >= 50 ? '50' : '0'; v.forEach(e => { e.checked = e.value === pick; }); got.push('recent sales'); };
+  if (Codes.isPage(t)) {
+    const p = Codes.page(t);
+    if (p.asin && mine && p.asin !== mine) return state('That page is a different product from the one you scanned', 'bad');
+    if (p.asin) { item.asin = p.asin; got.push('ASIN'); } if (p.title) { item.title ||= p.title; } if (p.brand) item.brand ||= p.brand;
+    for (const [k, n] of [['price', 'price'], ['rank', 'rank'], ['offers', 'sellers'], ['l', 'size'], ['w', ''], ['h', '']]) if (p[k]) set(k, p[k], n);
+    if (p.oz) set('lb', Fees.r2(p.oz / 16), 'weight'); if (p.l) f.querySelector('[name=how][value=""]').checked = true; if (p.cat) els.cat.value = p.cat; if (p.bought) bought(p.bought); if (p.amazonSells) { els.amazonSells.checked = true; got.push('Amazon is a seller'); }
+  } else {
+    const c = Codes.read(t), url = (t.match(/https?:\/\/\S+/) || [''])[0], before = t.slice(0, url ? t.indexOf(url) : 0).replace(/^(check (this )?out|look at this)[:!\s-]*/i, '').replace(/[\s:|-]+$/, '').trim();
+    if (c.type === 'asin' || c.type === 'isbn' || c.type === 'short') {
+      if (c.asin && mine && c.asin !== mine) return state('That link is a different product from the one you scanned. Tap New item first if you meant to switch', 'bad');
+      if (c.asin) { item.asin = c.asin; got.push('ASIN'); } if (url) item.url = url;
+      const name = before.length > 5 ? before : c.name || ''; if (name) { item.title = name.slice(0, 200); got.push('name'); const k = Codes.category(name); if (k && els.cat.value === 'other') els.cat.value = k; }
+      if (!els.code.value) { els.code.value = c.asin || t; lastKey = keyOf(els.code.value); }
+      if (!got.length && url) got.push('link');
+    } else {
+      const price = t.match(/^\$?\s?([\d,]{1,6}\.\d\d)$/) || t.match(/\$\s?([\d,]{1,6}\.\d\d)/), rank = t.match(/#\s?([\d,]+)\s+in\b/i), sold = t.match(/([\d.]+)(k?)\+?\s+bought/i);
+      if (price) set('price', price[1].replace(/,/g, ''), 'price'); if (rank) set('rank', rank[1].replace(/,/g, ''), 'rank'); if (sold) bought(parseFloat(sold[1]) * (sold[2] ? 1000 : 1));
+    }
+  }
+  showFound(); show();
+  state(got.length ? `Filled in: ${[...new Set(got.filter(Boolean))].join(', ')}.${els.price.value ? ' Check the price.' : ''}` : 'That did not look like an Amazon link, price, rank or page', got.length ? 'good' : 'maybe');
 }
 
 /* ---------- product names, straight from free services ---------- */
@@ -60,23 +100,24 @@ async function look() {
   const i = ['upc', 'ean', 'isbn', 'asin'].includes(c.type) ? await nameOf(c) : null;
   if (mine !== no) return;
   if (i) { item = { ...item, ...i, asin: item.asin || i.asin || '' }; if (i.cat && els.cat.value === 'other') els.cat.value = i.cat; }
-  $('#found').innerHTML = item.title ? `${item.image ? `<span class="shot">${pic(item.image)}</span>` : ''}<strong>${esc(item.title)}</strong>` : '';
-  state([c.note, item.title ? 'Type the shelf price and the Amazon price.' : navigator.onLine ? 'No free name for this one. Tap Find on Amazon, then type its price here.' : 'No signal. The math still works.'].filter(Boolean).join(' '), item.title ? 'blue' : 'maybe');
+  showFound();
+  state([c.note, item.title ? '' : navigator.onLine ? 'No free name for this one. Search Amazon below.' : 'No signal. The math still works.'].filter(Boolean).join(' '), item.title ? 'blue' : 'maybe');
   show();
 }
 f.addEventListener('input', e => {
   if (e.target.name === 'code') { const k = keyOf(els.code.value); if (k !== lastKey) { no++; const had = lastKey; lastKey = k; if (had) clearForm(true); else { item = {}; $('#found').innerHTML = ''; state(''); } } }
+  if (e.target.name === 'how' && SIZES[e.target.value]) ['l', 'w', 'h', 'lb'].forEach((k, i) => { els[k].value = SIZES[e.target.value][i]; });
+  if (e.target.name === 'how' && !e.target.value) ['l', 'w', 'h', 'lb'].forEach(k => { els[k].value = ''; });
+  if (['l', 'w', 'h', 'lb'].includes(e.target.name)) f.querySelector('[name=how][value=""]').checked = true;
   show();
 });
 f.addEventListener('submit', e => { e.preventDefault(); document.activeElement.blur(); look(); });
 els.code.addEventListener('paste', e => {
-  const t = e.clipboardData?.getData('text/plain') || ''; if (!Codes.isPage(t)) return;
-  e.preventDefault(); const p = Codes.page(t); if (!p.asin && !p.title) return state('No product was found in that page', 'bad');
-  clearForm(); els.code.value = p.asin || p.upc || ''; lastKey = keyOf(els.code.value); item = { asin: p.asin || '', title: p.title || '', brand: p.brand || '' };
-  for (const k of ['price', 'rank', 'offers', 'l', 'w', 'h']) if (p[k]) els[k].value = p[k]; if (p.oz) els.lb.value = Fees.r2(p.oz / 16); if (p.cat) els.cat.value = p.cat; els.amazonSells.checked = !!p.amazonSells;
-  $('#found').innerHTML = `<strong>${esc(item.title)}</strong>`; state('Filled from the page. Check the price.'); show();
+  const t = e.clipboardData?.getData('text/plain') || ''; if (!Codes.isPage(t) && !(els.code.value && /^\$|https?:\/\/|bought|^#/i.test(t.trim()))) return;
+  e.preventDefault(); takeText(t);
 });
 $('#look').onclick = () => look();
+$('#paste').onclick = async () => { let t; try { t = await navigator.clipboard.readText(); } catch { return state('Your phone blocked pasting. Press and hold the barcode box and tap Paste instead', 'maybe'); } takeText(t); };
 $('#fresh').onclick = () => { clearForm(); lastKey = ''; scrollTo(0, 0); };
 
 /* ---------- camera ---------- */
@@ -180,7 +221,7 @@ const DO = {
   clearSent() { const old = leads; leads = leads.filter(l => !l.sent); keep('leads', leads); counts(); drawLeads(); toast('Cleared', 'Undo', () => { leads = old; keep('leads', leads); counts(); drawLeads(); }); },
   photo() { $('#photo').click(); },
   unpair() { pc = ''; keep('pc', ''); drawSetup(); toast('Unpaired'); },
-  open(el, id) { const l = leads.find(x => x.uid === id); clearForm(); for (const e of els) { if (!e.name) continue; if (e.type === 'radio') e.checked = e.value === (l[e.name] || ''); else if (e.type === 'checkbox') e.checked = !!l[e.name]; else e.value = l[e.name] ?? (e.name === 'cat' ? 'other' : ''); } item = { title: l.title, image: l.image, asin: l.asin, brand: l.brand, url: l.url }; editing = l.uid; lastKey = keyOf(els.code.value); $('#found').innerHTML = `${l.image ? `<span class="shot">${pic(l.image)}</span>` : ''}<strong>${esc(l.title)}</strong>`; tab('scan'); show(); state(''); toast('Opened. Save lead updates it', 'Delete', () => { const old = leads; leads = leads.filter(x => x.uid !== id); keep('leads', leads); counts(); clearForm(); lastKey = ''; toast('Deleted', 'Undo', () => { leads = old; keep('leads', leads); counts(); }); }); },
+  open(el, id) { const l = leads.find(x => x.uid === id); clearForm(); for (const e of els) { if (!e.name) continue; if (e.type === 'radio') e.checked = e.value === String(l[e.name] ?? ''); else if (e.type === 'checkbox') e.checked = !!l[e.name]; else e.value = l[e.name] ?? (e.name === 'cat' ? 'other' : ''); } item = { title: l.title, image: l.image, asin: l.asin, brand: l.brand, url: l.url }; editing = l.uid; if (l.sizeGuess) { const k = Object.keys(SIZES).find(n => SIZES[n].every((v, i) => num(l[['l', 'w', 'h', 'lb'][i]]) === v)); if (k) f.querySelector(`[name=how][value=${k}]`).checked = true; } lastKey = keyOf(els.code.value); $('#found').innerHTML = `${l.image ? `<span class="shot">${pic(l.image)}</span>` : ''}<strong>${esc(l.title)}</strong>`; tab('scan'); show(); state(''); toast('Opened. Save lead updates it', 'Delete', () => { const old = leads; leads = leads.filter(x => x.uid !== id); keep('leads', leads); counts(); clearForm(); lastKey = ''; toast('Deleted', 'Undo', () => { leads = old; keep('leads', leads); counts(); }); }); },
 };
 
 /* ---------- setup ---------- */
@@ -213,6 +254,9 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-tab]
 document.addEventListener('error', e => { if (e.target.tagName === 'IMG') e.target.remove(); }, true);
 
 $('#tip').hidden = navigator.standalone || matchMedia('(display-mode: standalone)').matches || !/iPhone|iPad|Android/i.test(navigator.userAgent);
-els.store.value = mem('store', ''); els.cat.value = 'other'; counts(); show();
+els.store.value = mem('store', ''); els.cat.value = 'other'; counts();
+const draft = mem('draft', null);
+if (draft && Date.now() - draft.t < 12 * 3600e3) { putForm(draft.form); item = draft.item || {}; editing = draft.editing || null; lastKey = draft.lastKey || ''; showFound(); }
+show();
 navigator.storage?.persist?.();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

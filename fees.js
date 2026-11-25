@@ -125,7 +125,7 @@
     const maxCost = Math.max(0, Math.floor((maxUnit - num(x.shipTo)) / (perList || 1) / pack * 100) / 100);
     const drop10 = at(price * .9), drop20 = at(price * .8);
 
-    const no = [], warn = [], good = [];
+    const no = [], warn = [], good = [], info = [], bought = num(x.bought), counted = String(x.bought ?? '') !== '';
     if (!price) no.push('Add the Amazon price');
     if (!num(x.cost)) no.push('Add what you would pay');
     const ready = price > 0 && num(x.cost) > 0;
@@ -142,22 +142,27 @@
       if (x.melt) warn.push('Meltable: Amazon refuses it from April 15 to October 15');
       if (x.amazonSells) warn.push('Amazon sells it too and usually wins the sale');
       if (num(x.rank) > num(s.maxRank)) warn.push(`Sales rank is worse than your ${num(s.maxRank).toLocaleString('en-US')} limit`);
-      if (!num(x.rank)) warn.push('No sales rank, so you cannot tell if it sells');
+      if (!num(x.rank) && bought < 50) warn.push(counted ? (bought ? 'Fewer than 50 sold last month' : 'Amazon shows no recent sales count, so it may sell slowly') : 'No sales rank or sales count, so you cannot tell if it sells');
       if (num(x.offers) > num(s.maxOffers)) warn.push(`${num(x.offers)} sellers will split the sales`);
       if (num(x.avg90) && price > num(x.avg90) * 1.15) warn.push(`Price is above its 90-day average of $${num(x.avg90).toFixed(2)}`);
+      if (x.sizeGuess && known && !fbm) {
+        info.push('Size is your estimate');
+        if (profit >= num(s.minProfit) && check({ ...x, sizeGuess: false, oz: oz * 1.5, h: num(x.h) * 1.4 }, s, now).profit < num(s.minProfit)) warn.push('If it is bigger than you picked, it misses your profit goal');
+      }
       if (profit > 0 && drop10 < 0) warn.push('A 10% price drop wipes out the profit');
       if (num(x.rank) && num(x.rank) <= num(s.maxRank) / 4) good.push('Strong sales rank');
+      if (bought >= 500) good.push(`${bought.toLocaleString('en-US')}+ sold last month`);
       if (profit > 0 && drop20 >= 0) good.push('Still profitable if the price falls 20%');
       if (x.approved === 'yes') good.push('You are approved to sell it');
       if (roi >= num(s.minRoi) * 2) good.push('Return is at least double your goal');
     }
     const verdict = !ready ? '' : no.length ? 'SKIP' : warn.length ? 'MAYBE' : 'BUY';
     let score = 0;
-    if (ready && profit > 0) score = Math.min(35, roi / Math.max(1, num(s.minRoi)) * 18) + Math.min(25, profit / Math.max(.01, num(s.minProfit)) * 12) + (drop20 >= 0 ? 20 : drop10 >= 0 ? 10 : 0) + (num(x.rank) && num(x.rank) <= num(s.maxRank) ? 10 : 0) + (x.approved === 'yes' ? 10 : 0) - Math.max(0, warn.length - 1) * 4;
+    if (ready && profit > 0) score = Math.min(35, roi / Math.max(1, num(s.minRoi)) * 18) + Math.min(25, profit / Math.max(.01, num(s.minProfit)) * 12) + (drop20 >= 0 ? 20 : drop10 >= 0 ? 10 : 0) + ((num(x.rank) && num(x.rank) <= num(s.maxRank)) || bought >= 50 ? 10 : 0) + (x.approved === 'yes' ? 10 : 0) - Math.max(0, warn.length - 1) * 4;
     if (no.length) score = Math.min(score, 30);
     score = Math.max(0, Math.min(100, Math.round(score)));
     const today = now.toISOString().slice(0, 10);
-    return { verdict, score, profit, roi: r2(roi), margin: price ? r2(profit / price * 100) : 0, unit, costs: c, fees: r2(c.total - unit), payout: r2(price - (c.total - unit)), tier: f.tier, peak, known, breakeven, maxCost, drop10, drop20, no, warn, good, ratesOld: today >= RATES_END };
+    return { verdict, score, profit, roi: r2(roi), margin: price ? r2(profit / price * 100) : 0, unit, costs: c, fees: r2(c.total - unit), payout: r2(price - (c.total - unit)), tier: f.tier, peak, known, breakeven, maxCost, drop10, drop20, no, warn, good, info, ratesOld: today >= RATES_END };
   }
 
   const api = { CATS, TIERS, DEFAULTS, RATES_END, referral, closing, isPeak, size, fulfillment, placement, storage, check, num, r2 };
