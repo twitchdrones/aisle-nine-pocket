@@ -208,7 +208,8 @@ function drawLeads() {
     ${leads.length && !pc ? '<p class="soft">To send in one tap, pair with your PC in Setup. Or share a file and open it on the PC.</p>' : ''}</section>
     ${leads.map(l => `<button class="lead ${l.sent ? 'sent' : ''}" data-lead="${esc(l.uid)}"><span class="shot">${pic(l.image)}</span><div><span class="name">${esc(l.title)}</span><span class="line">${esc([l.store, l.cost && usd(l.cost), l.sent ? 'sent' : ''].filter(Boolean).join(' · '))}</span></div><span class="end">${l.verdict ? `<span class="chip ${esc(l.verdict)}">${esc(l.verdict)}</span><span class="soft">${usd(l.profit, 1)}</span>` : ''}</span></button>`).join('')}`;
 }
-const pack = list => list.map(({ when, sent, code, verdict, profit, ...l }) => ({ ...l, ...Object.fromEntries(['cost', 'price', 'low90', 'rank', 'offers', 'l', 'w', 'h'].map(k => [k, l[k] === '' || l[k] === undefined ? '' : num(l[k])])) }));
+// The PC is told when an Amazon price was typed, so it can warn when the price has gone stale.
+const pack = list => list.map(({ when, sent, code, verdict, profit, ...l }) => ({ ...l, ...(l.price && when ? { priceSrc: 'you', priceAt: Math.round(when / 1000) } : {}), ...Object.fromEntries(['cost', 'price', 'low90', 'rank', 'offers', 'l', 'w', 'h'].map(k => [k, l[k] === '' || l[k] === undefined ? '' : num(l[k])])) }));
 const b64 = o => { let s = ''; for (const b of new TextEncoder().encode(JSON.stringify(o))) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const DO = {
   send() {
