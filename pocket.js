@@ -4,7 +4,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const num = Fees.num, usd = (v, sign) => { v = num(v); return (v < 0 ? '-' : sign && v > 0 ? '+' : '') + '$' + Math.abs(v).toFixed(2); };
 const mem = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const keep = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { toast('This phone would not save it. Send your leads to the PC'); return false; } };
-let settings = { ...Fees.DEFAULTS, ...mem('settings', {}) }, leads = mem('leads', []), pc = mem('pc', ''), asking = mem('asking', []), item = {}, editing = null, toastTimer;
+let settings = (s => { if (!mem('goals-2026-11', false)) { if (s.minProfit === 4) s.minProfit = 5; if (s.minRoi === 35) s.minRoi = 30; try { localStorage.setItem('settings', JSON.stringify(s)); localStorage.setItem('goals-2026-11', 'true'); } catch { /* private mode */ } } return { ...Fees.DEFAULTS, ...s }; })(mem('settings', {})), leads = mem('leads', []), pc = mem('pc', ''), asking = mem('asking', []), item = {}, editing = null, toastTimer;
 
 function toast(text, action, fn) {
   const t = $('#toast'); t.innerHTML = `<span>${esc(text)}</span>${action ? `<button>${esc(action)}</button>` : ''}`;
@@ -225,7 +225,7 @@ const DO = {
 };
 
 /* ---------- setup ---------- */
-const FIELDS = [['tax', 'Sales tax (%)'], ['minProfit', 'Least profit each ($)'], ['minRoi', 'Least return (%)'], ['maxRank', 'Worst sales rank'], ['maxOffers', 'Most sellers'], ['prep', 'Prep each ($)'], ['inboundLb', 'Shipping to Amazon per lb ($)'], ['months', 'Months in storage'], ['returns', 'Returns set-aside (%)']];
+const FIELDS = [['tax', 'Sales tax (%)'], ['minProfit', 'Least profit each ($)'], ['minRoi', 'Least return (%)'], ['minMargin', 'Least margin (%)'], ['stress', 'Price drop to test (%)'], ['maxRank', 'Worst sales rank'], ['maxOffers', 'Most sellers'], ['prep', 'Prep each ($)'], ['inboundLb', 'Shipping to Amazon per lb ($)'], ['months', 'Months in storage'], ['returns', 'Returns set-aside (%)']];
 function drawSetup() {
   $('#setup').innerHTML = `<section class="glass pane"><strong>Your PC</strong><p class="soft">${pc ? `Paired with ${esc(new URL(pc).host)}. Leads send when you are on your home Wi-Fi with the PC app open.` : 'On the PC open Aisle Nine, Connections, Phone, and turn it on. Then tap Scan here and point at the pairing code. Your goals and tax rate copy over too.'}</p><div class="row"><button class="btn" data-do="photo">Read a photo</button>${pc ? '<button class="btn" data-do="unpair">Unpair</button>' : ''}</div></section>
   <section class="glass pane"><strong>Your goals</strong><form id="set"><div class="fields pair">${FIELDS.map(([k, n]) => `<label class="field">${n}<input name="${k}" inputmode="decimal" value="${esc(settings[k])}"></label>`).join('')}<label class="field all">Seller plan<select name="plan"><option value="individual" ${settings.plan === 'individual' ? 'selected' : ''}>Individual, $0.99 a sale</option><option value="pro" ${settings.plan === 'pro' ? 'selected' : ''}>Professional, $39.99 a month</option></select></label></div><button class="btn go" style="width:100%;margin-top:14px">Save</button></form></section>

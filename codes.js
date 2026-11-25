@@ -97,7 +97,7 @@
   }
 
   /* ---- a whole Amazon product page, copied by hand ---- */
-  const CATEGORY = [[/toys?( &| and|$)/i, 'toys'], [/video game/i, 'games'], [/baby/i, 'baby'], [/pet supplies|animals & pet/i, 'pets'], [/beauty|health|personal care|household supplies/i, 'beauty'], [/grocery|gourmet|food, bev|beverages/i, 'grocery'], [/shoe|footwear/i, 'shoes'], [/clothing|apparel/i, 'clothing'], [/^books|kindle|cds|vinyl|movies|dvd|media|music$/i, 'media'], [/cell phones?|accessories.*electronic|electronics accessories/i, 'eaccess'], [/computer/i, 'computers'], [/electronics|camera/i, 'electronics'], [/office|school supplies/i, 'office'], [/sport|outdoor recreation|sporting goods/i, 'sports'], [/lawn|garden(?! >)|patio/i, 'lawn'], [/automotive|vehicles/i, 'auto'], [/tools|hardware/i, 'tools'], [/musical instr/i, 'music'], [/industrial|scientific|business/i, 'business'], [/luggage|handbag|backpack/i, 'bags'], [/jewelry/i, 'jewelry'], [/watches/i, 'watches'], [/appliances/i, 'appliances'], [/furniture/i, 'furniture'], [/home|kitchen|dining|crafts|arts/i, 'home']];
+  const CATEGORY = [[/video game/i, 'games'], [/\bbaby\b/i, 'baby'], [/pet supplies|animals & pet|^pets\b/i, 'pets'], [/\btoys?\b/i, 'toys'], [/beauty|health|personal care|household supplies/i, 'beauty'], [/grocery|gourmet|food, bev|beverages/i, 'grocery'], [/shoe|footwear/i, 'shoes'], [/clothing|apparel/i, 'clothing'], [/^books|kindle|cds|vinyl|movies|dvd|media|music$/i, 'media'], [/cell phones?|accessories.*electronic|electronics accessories/i, 'eaccess'], [/computer/i, 'computers'], [/electronics|camera/i, 'electronics'], [/office|school supplies/i, 'office'], [/sport|outdoor recreation|sporting goods/i, 'sports'], [/lawn|garden(?! >)|patio/i, 'lawn'], [/automotive|vehicles/i, 'auto'], [/tools|hardware/i, 'tools'], [/musical instr/i, 'music'], [/industrial|scientific|business/i, 'business'], [/luggage|handbag|backpack/i, 'bags'], [/jewelry/i, 'jewelry'], [/watches/i, 'watches'], [/appliances/i, 'appliances'], [/furniture/i, 'furniture'], [/home|kitchen|dining|crafts|arts/i, 'home']];
   const category = t => (CATEGORY.find(([re]) => re.test(String(t || '').trim())) || [])[1] || '';
   const INCH = { inch: 1, in: 1, '"': 1, centimeter: 1 / 2.54, cm: 1 / 2.54, millimeter: 1 / 25.4, mm: 1 / 25.4, feet: 12, foot: 12, ft: 12 }, OUNCE = { pound: 16, lb: 16, ounce: 1, oz: 1, gram: 1 / 28.3495, g: 1 / 28.3495, kilogram: 35.274, kg: 35.274 };
   const unit = (table, u) => table[u.toLowerCase().replace(/s$/, '')] ?? table[u.toLowerCase()];
@@ -140,6 +140,22 @@
     return out;
   }
 
-  const api = { read, page, isPage, category, upcCheck };
+  /* Does a store title and an Amazon title describe the same pack and size? */
+  const COUNT = [/\b(?:pack|case|set|box|lot|bundle) of (\d{1,3})\b/i, /\b(\d{1,3})[\s-]*(?:pack|pk|packs)\b/i, /\b(\d{1,3})\s*(?:x|×)\s*\d/i, /\((\d{1,3})[\s-]*(?:pack|pk|count|ct|pcs?)\)/i];
+  const pack = t => { for (const re of COUNT) { const m = String(t || '').match(re); if (m && +m[1] > 0) return +m[1]; } return 1; };
+  const UNITS = { oz: ['fl\\.? ?oz', 'ounces?', 'oz'], lb: ['pounds?', 'lbs?'], ml: ['ml', 'milliliters?'], l: ['liters?', 'litres?'], g: ['grams?', 'g'], kg: ['kg', 'kilograms?'], ct: ['count', 'ct', 'sheets', 'tablets', 'capsules', 'pieces', 'pcs'], in: ['inch(?:es)?', 'in\\.?', '"'], gb: ['gb'], tb: ['tb'] };
+  const sizes = t => { const o = {}; for (const [u, names] of Object.entries(UNITS)) { const m = String(t || '').match(new RegExp(`(\\d+(?:\\.\\d+)?)[\\s-]*(?:${names.join('|')})(?![a-z])`, 'i')); if (m) o[u] = +m[1]; } return o; };
+  function differs(a, b) {
+    if (!a || !b) return [];
+    const out = [], p = pack(a), k = pack(b), x = sizes(a), y = sizes(b), color = /\b(black|white|red|blue|green|pink|purple|yellow|orange|gr[ae]y|brown|silver|gold|navy|teal|beige)\b/i, ca = (a.match(color) || [])[1], cb = (b.match(color) || [])[1];
+    const W = t => new Set((t.toLowerCase().match(/[a-z]{3,}/g) || []).filter(w => !['the', 'and', 'for', 'with', 'pack', 'set', 'new', 'count'].includes(w))), wa = W(a), wb = W(b);
+    if (wa.size && wb.size && ![...wa].some(w => wb.has(w))) out.push('The two names share no words, so it may be the wrong product');
+    if (p !== k) out.push(`Pack size differs: the store title looks like ${p}, Amazon looks like ${k}`);
+    for (const u of Object.keys(x)) if (y[u] !== undefined && Math.abs(x[u] - y[u]) > .05 * Math.max(x[u], y[u])) out.push(`Size differs: ${x[u]} ${u} in the store, ${y[u]} ${u} on Amazon`);
+    if (ca && cb && ca.toLowerCase().replace('gray', 'grey') !== cb.toLowerCase().replace('gray', 'grey')) out.push(`Color differs: ${ca.toLowerCase()} in the store, ${cb.toLowerCase()} on Amazon`);
+    return out;
+  }
+
+  const api = { read, page, isPage, category, upcCheck, pack, differs };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Codes = api;
 })(typeof self !== 'undefined' ? self : this);

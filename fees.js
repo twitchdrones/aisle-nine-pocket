@@ -91,7 +91,7 @@
     return r2(cuft * months * (sz.standard ? (q4 ? 2.4 : .78) : (q4 ? 1.4 : .56)));
   }
 
-  const DEFAULTS = { tax: 0, prep: .25, inboundLb: .5, months: 2, returns: 3, plan: 'individual', placement: 'auto', season: 'auto', minProfit: 4, minRoi: 35, maxRank: 200000, maxOffers: 15 };
+  const DEFAULTS = { tax: 0, prep: .25, inboundLb: .5, months: 2, returns: 3, plan: 'individual', placement: 'auto', season: 'auto', minProfit: 5, minRoi: 30, minMargin: 15, stress: 15, maxRank: 200000, maxOffers: 15 };
 
   // x: one unit being considered. s: settings.
   function check(x, s, now = new Date()) {
@@ -120,10 +120,12 @@
     const first = (goal) => { let lo = 0, hi = 5000; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; goal(m) ? hi = m : lo = m; } return hi; };
     const breakeven = r2(first(p => at(p) >= 0));
     // Highest landed cost that still meets both goals.
-    const room = profit + unit, maxUnit = Math.max(0, Math.min(room - num(s.minProfit), room / (1 + num(s.minRoi) / 100)));
+    // room - unit is the profit, so each goal caps the unit cost: profit, return on cost, and margin on the sale price.
+    const room = profit + unit, maxUnit = Math.max(0, Math.min(room - num(s.minProfit), room / (1 + num(s.minRoi) / 100), room - price * num(s.minMargin) / 100));
     const perList = list > 0 ? (unit - num(x.shipTo)) / list : 1 + num(s.tax) / 100;
     const maxCost = Math.max(0, Math.floor((maxUnit - num(x.shipTo)) / (perList || 1) / pack * 100) / 100);
-    const drop10 = at(price * .9), drop20 = at(price * .8);
+    const drop10 = at(price * .9), drop20 = at(price * .8), stress = Math.min(50, Math.max(0, num(s.stress))), dropS = stress ? at(price * (1 - stress / 100)) : profit;
+    const margin = price ? r2(profit / price * 100) : 0;
 
     const no = [], warn = [], good = [], info = [], bought = num(x.bought), counted = String(x.bought ?? '') !== '';
     if (!price) no.push('Add the Amazon price');
@@ -135,9 +137,12 @@
       else {
         if (profit < num(s.minProfit)) no.push(`Profit is under your $${num(s.minProfit)} goal`);
         if (roi < num(s.minRoi)) no.push(`Return is under your ${num(s.minRoi)}% goal`);
+        if (margin < num(s.minMargin)) no.push(`Margin is under your ${num(s.minMargin)}% goal`);
       }
       if (x.approved !== 'yes' && x.approved !== 'no') warn.push('Check that you are approved to sell it before you pay');
       if (!known && !fbm) warn.push('Size is a guess (1 lb, 9 x 6 x 3 in)');
+      if (!x.sameItem) for (const d of x.doubts || []) warn.push(d);
+      if (x.priceAt && now.getTime() / 1000 - x.priceAt > 86400) warn.push(`The Amazon price is ${Math.floor((now.getTime() / 1000 - x.priceAt) / 86400)} day${now.getTime() / 1000 - x.priceAt < 172800 ? '' : 's'} old`);
       if (x.hazmat) warn.push('Hazmat: needs extra paperwork and higher fees');
       if (x.melt) warn.push('Meltable: Amazon refuses it from April 15 to October 15');
       if (x.amazonSells) warn.push('Amazon sells it too and usually wins the sale');
@@ -149,10 +154,12 @@
         info.push('Size is your estimate');
         if (profit >= num(s.minProfit) && check({ ...x, sizeGuess: false, oz: oz * 1.5, h: num(x.h) * 1.4 }, s, now).profit < num(s.minProfit)) warn.push('If it is bigger than you picked, it misses your profit goal');
       }
-      if (profit > 0 && drop10 < 0) warn.push('A 10% price drop wipes out the profit');
+      // Stress test: would a lower Amazon price still pay what you want? Checked once the item meets the goal at today's price.
+      if (profit >= num(s.minProfit) && stress && dropS < num(s.minProfit)) warn.push(dropS < 0 ? `A ${stress}% price drop makes it lose money` : `A ${stress}% price drop cuts profit to $${dropS.toFixed(2)}, under your $${num(s.minProfit)} goal`);
+      else if (profit > 0 && drop10 < 0) warn.push('A 10% price drop wipes out the profit');
       if (num(x.rank) && num(x.rank) <= num(s.maxRank) / 4) good.push('Strong sales rank');
       if (bought >= 500) good.push(`${bought.toLocaleString('en-US')}+ sold last month`);
-      if (profit > 0 && drop20 >= 0) good.push('Still profitable if the price falls 20%');
+      if (profit > 0 && drop20 >= num(s.minProfit)) good.push('Still meets your profit goal if the price falls 20%');
       if (x.approved === 'yes') good.push('You are approved to sell it');
       if (roi >= num(s.minRoi) * 2) good.push('Return is at least double your goal');
     }
@@ -162,7 +169,7 @@
     if (no.length) score = Math.min(score, 30);
     score = Math.max(0, Math.min(100, Math.round(score)));
     const today = now.toISOString().slice(0, 10);
-    return { verdict, score, profit, roi: r2(roi), margin: price ? r2(profit / price * 100) : 0, unit, costs: c, fees: r2(c.total - unit), payout: r2(price - (c.total - unit)), tier: f.tier, peak, known, breakeven, maxCost, drop10, drop20, no, warn, good, info, ratesOld: today >= RATES_END };
+    return { verdict, score, profit, roi: r2(roi), margin, unit, costs: c, fees: r2(c.total - unit), payout: r2(price - (c.total - unit)), tier: f.tier, peak, known, breakeven, maxCost, drop10, drop20, stress, dropS, no, warn, good, info, ratesOld: today >= RATES_END };
   }
 
   const api = { CATS, TIERS, DEFAULTS, RATES_END, referral, closing, isPeak, size, fulfillment, placement, storage, check, num, r2 };
