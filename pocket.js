@@ -265,4 +265,12 @@ const draft = mem('draft', null);
 if (draft && Date.now() - draft.t < 12 * 3600e3) { putForm(draft.form); item = draft.item || {}; editing = draft.editing || null; lastKey = draft.lastKey || ''; showFound(); }
 show();
 navigator.storage?.persist?.();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+// Updates: check for a new version on every open (skipping the browser's copy of sw.js), and when one takes over,
+// reload once so the new screens show right away. The draft above keeps whatever was typed.
+if ('serviceWorker' in navigator) {
+  const had = !!navigator.serviceWorker.controller; let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !reloaded) { reloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => {
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') r.update().catch(() => {}); });
+  }).catch(() => {});
+}
