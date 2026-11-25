@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src 'self' blob:; connect-src 'self' https://openlibrary.org https://world.openfoodfacts.org https://world.openbeautyfacts.org https://world.openpetfoodfacts.org https://world.openproductsfacts.org https://musicbrainz.org; base-uri 'none'; form-action 'none'">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#07080d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aisle Nine">
+<title>Aisle Nine Pocket</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="pocket.css">
+</head>
+<body>
+<header><h1 class="big" id="title">Scan</h1><button class="btn slim" id="fresh">New item</button></header>
+
+<main id="scan">
+  <section class="glass pane" id="tip" hidden><strong>Put this on your home screen</strong><p class="soft">In Safari tap Share, then Add to Home Screen. Then it opens like an app and works with no signal.</p></section>
+  <section id="cam" hidden><video id="video" playsinline muted></video><div id="aim"></div><div id="camBar"><button class="btn slim" id="torch" hidden>Light</button><button class="btn slim" id="stop">Close camera</button></div></section>
+  <form id="f" autocomplete="off">
+    <section class="glass pane">
+      <div class="row tight"><label class="field">Barcode, ISBN, ASIN or link<input name="code" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></label><button type="button" class="btn" id="look">Look up</button></div>
+      <div id="state" class="note blue" role="status"></div>
+      <div id="found"></div>
+      <div class="fields pair"><label class="field">Shelf price ($)<input name="cost" inputmode="decimal"></label><label class="field">Amazon price ($)<input name="price" inputmode="decimal"></label></div>
+      <div id="links" class="row"></div>
+    </section>
+    <section class="glass pane" id="out"></section>
+    <section class="glass pane">
+      <div class="field">Approved to sell it?<div class="seg"><label><input type="radio" name="approved" value="" checked>Not sure</label><label><input type="radio" name="approved" value="yes">Yes</label><label><input type="radio" name="approved" value="no">No</label></div></div>
+      <div class="fields pair"><label class="field">Sales rank<input name="rank" inputmode="numeric"></label><label class="field">Sellers<input name="offers" inputmode="numeric"></label></div>
+      <details><summary>Category, size, discounts</summary><div class="fields pair">
+        <label class="field all">Category<select name="cat"></select></label>
+        <label class="field">Weight (lb)<input name="lb" inputmode="decimal"></label><label class="field">Length (in)<input name="l" inputmode="decimal"></label><label class="field">Width (in)<input name="w" inputmode="decimal"></label><label class="field">Height (in)<input name="h" inputmode="decimal"></label>
+        <label class="field">Coupon (%)<input name="coupon" inputmode="decimal"></label><label class="field">Units per listing<input name="pack" inputmode="numeric"></label></div>
+        <label class="tick"><input type="checkbox" name="amazonSells">Amazon sells it too</label><label class="tick"><input type="checkbox" name="hazmat">Hazmat</label><label class="tick"><input type="checkbox" name="melt">Meltable</label></details>
+      <div class="fields"><label class="field">Store<input name="store"></label><label class="field">Notes<input name="notes"></label></div>
+    </section>
+  </form>
+</main>
+<main id="leads" hidden></main>
+<main id="setup" hidden></main>
+
+<input type="file" id="photo" accept="image/*" hidden>
+<div id="bar"><button class="btn" id="save">Save lead</button><button class="btn go" id="go">Scan</button></div>
+<nav id="tabs" aria-label="Main"><button data-tab="scan" aria-current="page">Scan</button><button data-tab="leads">Leads <span id="count"></span></button><button data-tab="setup">Setup</button></nav>
+<div id="toast" role="status"></div>
+<script src="vendor/zxing.js"></script>
+<script src="fees.js"></script>
+<script src="codes.js"></script>
+<script src="pocket.js"></script>
+</body>
+</html>

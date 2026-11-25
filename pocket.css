@@ -1,0 +1,30 @@
+html { background: var(--bg) }
+body { display: block; height: auto; min-height: 100vh; overflow: auto; padding: calc(10px + env(safe-area-inset-top)) 12px calc(160px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; background-attachment: fixed }
+header { display: flex; align-items: center; gap: 10px; padding: 4px 6px 12px; min-height: 52px }
+header h1 { font-size: 26px; margin-right: auto }
+main { display: block; overflow: visible; border-radius: 0 }
+.pane { padding: 16px; margin-bottom: 12px }
+.field input, .field select, .field textarea { font-size: 17px; min-height: 50px }
+.fields.pair { grid-template-columns: 1fr 1fr }
+.row.tight { flex-wrap: nowrap; align-items: flex-end } .row.tight .field { flex: 1 } .row.tight .btn { min-height: 50px }
+#state:empty, #found:empty, #links:empty { display: none }
+#found { display: flex; gap: 12px; align-items: center } #found .shot { width: 88px; flex: none } #found strong { min-width: 0; overflow-wrap: anywhere }
+.hero { min-height: 112px } .hero .chip { font-size: 20px; padding: 6px 18px }
+.pane > .flow { margin-top: 12px }
+#cam { position: relative; border-radius: 26px; overflow: hidden; background: #000; aspect-ratio: 4 / 3; margin-bottom: 12px }
+#video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover }
+#aim { position: absolute; inset: 24% 8%; border-radius: 22px; box-shadow: 0 0 0 2px #ffffffd9, 0 0 0 999px #00000080; transition: box-shadow 160ms var(--ease-out) }
+#aim.hit { box-shadow: 0 0 0 4px var(--good), 0 0 0 999px #00000080 }
+#camBar { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; justify-content: space-between; gap: 8px } #camBar .btn { background: #0b0d14d9 } #stop { margin-left: auto }
+#bar { position: fixed; z-index: 2; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); padding: 10px 12px; display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; background: linear-gradient(transparent, #07080df2 26%) }
+#bar .btn { min-height: 56px; font-size: 18px } #bar .btn:not(.go) { background: #23262f }
+#tabs { position: fixed; z-index: 2; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 4px 12px calc(4px + env(safe-area-inset-bottom)); background: #0b0d14; box-shadow: 0 -1px 0 var(--ring); border-radius: 0; flex-direction: row; gap: 0 }
+#tabs button { justify-content: center; min-height: 50px; padding: 0; border-radius: 16px; font-size: 16px; background: none; box-shadow: none }
+#tabs button[aria-current=page] { color: var(--b); font-weight: 600 } #tabs span { margin: 0; min-width: 0 }
+#toast { bottom: calc(150px + env(safe-area-inset-bottom)) }
+.lead { display: flex; gap: 12px; align-items: center; width: 100%; padding: 10px; border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--ring); text-align: left; margin-bottom: 8px }
+.lead .shot { width: 76px; flex: none } .lead > div { flex: 1; min-width: 0 } .lead .name { margin: 0; height: auto; max-height: 2.6em } .lead .line { margin: 3px 0 0 }
+.lead .end { flex: none; display: grid; gap: 6px; justify-items: end }
+.sent { opacity: .62 }
+#bar.one { grid-template-columns: 1fr }
+#toast { width: max-content } #toast button { white-space: nowrap }
