@@ -42,7 +42,7 @@ function show() {
   // Keepa opens the product by ASIN, or its search by barcode or name, so the 90-day low is one tap away.
   const kp = asin ? `https://keepa.com/#!product/1-${enc(asin)}` : q ? `https://keepa.com/#!search/1-${q}` : ''; $('#keepaGo').hidden = !kp; if (kp) $('#keepaGo').href = kp;
   const named = item.title && isCode, nm = $('#amzName'); nm.textContent = named ? 'Search by name' : 'Search Google'; nm.href = named ? `https://www.amazon.com/s?k=${enc(item.title.slice(0, 90))}` : `https://www.google.com/search?q=${enc('amazon ' + word)}`;
-  const list = [asin && ['Can I sell it?', `https://sellercentral.amazon.com/abis/listing/syh?asin=${enc(asin)}`], asin && ['Price history', `https://camelcamelcamel.com/product/${enc(asin)}`], q && ['eBay sold', `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`]].filter(Boolean);
+  const list = [asin ? ['Can I sell it?', `https://sellercentral.amazon.com/abis/listing/syh?asin=${enc(asin)}`] : isCode && ['Can I sell it?', `https://sellercentral.amazon.com/product-search/search?q=${q}`], asin && ['Price history', `https://camelcamelcamel.com/product/${enc(asin)}`], q && ['eBay sold', `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`]].filter(Boolean);
   $('#links').innerHTML = list.map(([n, u]) => `<a class="btn slim" target="_blank" rel="noopener" href="${u}">${n}</a>`).join('');
   if (x.code || x.cost || x.price) keep('draft', { t: Date.now(), form: rawForm(), item, editing, lastKey });
 }
@@ -193,7 +193,7 @@ const uid = () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(
 $('#save').onclick = () => {
   const x = values(), c = Codes.read(x.code), r = Fees.check(x, settings);
   if (!x.code && !x.title && !x.notes) return toast('Scan something first');
-  const old = leads.find(l => l.uid === editing), lead = { ...x, uid: old?.uid || uid(), when: old?.when || Date.now(), sent: 0, title: x.title || x.notes || c.value || x.code, upc: ['upc', 'ean', 'isbn'].includes(c.type) ? c.value : '', asin: x.asin || c.asin || '', verdict: r.verdict, profit: r.verdict ? r.profit : '' };
+  const old = leads.find(l => l.uid === editing), lead = { ...x, uid: old?.uid || uid(), when: old?.when || Date.now(), sent: 0, title: x.title || x.notes || c.value || x.code, upc: ['upc', 'ean', 'isbn'].includes(c.type) ? c.value : '', asin: x.asin || c.asin || '', verdict: r.verdict, profit: r.verdict ? r.profit : '', priceAt: x.price ? (old?.priceAt && num(old.price) === num(x.price) ? old.priceAt : Date.now()) : '' };
   const next = old ? leads.map(l => l === old ? lead : l) : [lead, ...leads];
   if (!keep('leads', next)) return;
   leads = next; keep('store', x.store); clearForm(); lastKey = ''; counts(); scrollTo(0, 0); toast(old ? 'Updated' : 'Saved on this phone');
@@ -208,8 +208,8 @@ function drawLeads() {
     ${leads.length && !pc ? '<p class="soft">To send in one tap, pair with your PC in Setup. Or share a file and open it on the PC.</p>' : ''}</section>
     ${leads.map(l => `<button class="lead ${l.sent ? 'sent' : ''}" data-lead="${esc(l.uid)}"><span class="shot">${pic(l.image)}</span><div><span class="name">${esc(l.title)}</span><span class="line">${esc([l.store, l.cost && usd(l.cost), l.sent ? 'sent' : ''].filter(Boolean).join(' · '))}</span></div><span class="end">${l.verdict ? `<span class="chip ${esc(l.verdict)}">${esc(l.verdict)}</span><span class="soft">${usd(l.profit, 1)}</span>` : ''}</span></button>`).join('')}`;
 }
-// The PC is told when an Amazon price was typed, so it can warn when the price has gone stale.
-const pack = list => list.map(({ when, sent, code, verdict, profit, ...l }) => ({ ...l, ...(l.price && when ? { priceSrc: 'you', priceAt: Math.round(when / 1000) } : {}), ...Object.fromEntries(['cost', 'price', 'low90', 'rank', 'offers', 'l', 'w', 'h'].map(k => [k, l[k] === '' || l[k] === undefined ? '' : num(l[k])])) }));
+// The PC is told when the Amazon price was typed (or last changed), so it can warn when the price has gone stale.
+const pack = list => list.map(({ when, sent, code, verdict, profit, ...l }) => ({ ...l, ...(l.price && (l.priceAt || when) ? { priceSrc: 'you', priceAt: Math.round((l.priceAt || when) / 1000) } : {}), ...Object.fromEntries(['cost', 'price', 'low90', 'rank', 'offers', 'l', 'w', 'h'].map(k => [k, l[k] === '' || l[k] === undefined ? '' : num(l[k])])) }));
 const b64 = o => { let s = ''; for (const b of new TextEncoder().encode(JSON.stringify(o))) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const DO = {
   send() {

@@ -104,11 +104,12 @@
   const DEFAULTS = { tax: 0, prep: .25, inboundLb: .5, months: 2, returns: 3, plan: 'individual', placement: 'auto', season: 'auto', fees2027: 'auto', minProfit: 5, minRoi: 30, minMargin: 15, stress: 15, maxRank: 200000, maxOffers: 15 };
 
   // x: one unit being considered. s: settings.
+  const localDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; // the local calendar date, not UTC
   function check(x, s, now = new Date()) {
     s = Object.assign({}, DEFAULTS, s);
     const listed = num(x.price), low90 = num(x.low90), price = low90 > 0 && (!listed || low90 < listed) ? low90 : listed, pack = Math.max(1, Math.round(num(x.pack)) || 1), oz = num(x.oz), dims = [num(x.l), num(x.w), num(x.h)];
     const known = oz > 0 && dims.every(d => d > 0), fbm = x.mode === 'fbm';
-    const y2027 = s.fees2027 === 'on' || (s.fees2027 !== 'off' && now.toISOString().slice(0, 10) >= START_2027);
+    const y2027 = s.fees2027 === 'on' || (s.fees2027 !== 'off' && localDay(now) >= START_2027);
     // In 2027 mode the unit sells after Jan 14, so no holiday fee and January storage rates.
     const peak = !y2027 && (s.season === 'peak' || (s.season !== 'normal' && isPeak(now))), storeDate = y2027 && now.getMonth() >= 9 ? new Date(now.getFullYear() + 1, 1, 1) : now;
     const apparel = x.cat === 'clothing' || x.cat === 'shoes';
@@ -186,7 +187,7 @@
     if (ready && profit > 0) score = Math.min(35, roi / Math.max(1, num(s.minRoi)) * 18) + Math.min(25, profit / Math.max(.01, num(s.minProfit)) * 12) + (drop20 >= 0 ? 20 : drop10 >= 0 ? 10 : 0) + ((num(x.rank) && num(x.rank) <= num(s.maxRank)) || bought >= 50 ? 10 : 0) + (x.approved === 'yes' ? 10 : 0) - Math.max(0, warn.length - 1) * 4;
     if (no.length) score = Math.min(score, 30);
     score = Math.max(0, Math.min(100, Math.round(score)));
-    const today = now.toISOString().slice(0, 10);
+    const today = localDay(now);
     return { verdict, score, profit, roi: r2(roi), margin, unit, costs: c, fees: r2(c.total - unit), payout: r2(price - (c.total - unit)), tier: f.tier, peak, known, breakeven, maxCost, drop10, drop20, stress, dropS, y2027, listed, priceUsed: price, costPct: price && num(x.cost) ? r2(unit / price * 100) : 0, no, warn, good, info, ratesOld: today >= RATES_END };
   }
 
